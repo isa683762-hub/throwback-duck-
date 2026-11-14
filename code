@@ -1,0 +1,219 @@
+import pygame
+import random
+from sys import exit
+
+pygame.init()
+
+WIDTH = 700
+HEIGHT = 400
+FPS = 60
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+clock = pygame.time.Clock()
+
+
+# assets
+
+def load(path, size):
+    image = pygame.image.load(path).convert_alpha()
+    image = pygame.transform.scale(image, size)
+    return image
+
+
+land = load("pixel/land.png", (WIDTH, HEIGHT))
+land_width = land.get_width()
+
+
+# spritesheet
+
+class load_spritesheet:
+    def __init__(self, path, number_of_frames):
+        self.sheet = pygame.image.load(path).convert_alpha()
+
+        self.sheet_width = self.sheet.get_width()
+        self.sheet_height = self.sheet.get_height()
+
+        self.frames = []
+
+        for i in range(number_of_frames):
+            start_x = round(i * self.sheet_width / number_of_frames)
+            end_x = round((i + 1) * self.sheet_width / number_of_frames)
+
+            frame_width = end_x - start_x
+
+            frame = self.sheet.subsurface(
+                (start_x, 0, frame_width, self.sheet_height)
+            )
+
+            self.frames.append(frame)
+
+
+# game state
+
+class Helper:
+    def __init__(self, image, position):
+        self.image = image
+        self.rect = self.image.get_rect()
+        self.rect.center = position
+
+    def draw(self, camera_x):
+        screen_x = self.rect.x - camera_x
+
+        screen.blit(self.image, (screen_x, self.rect.y))
+
+
+# characters
+
+class Player(Helper, load_spritesheet):
+    def __init__(self, path, number_of_frames):
+        load_spritesheet.__init__(self, path, number_of_frames)
+
+        Helper.__init__(
+            self,
+            self.frames[0],
+            (250, 340)
+        )
+
+        # animation
+        self.current_frame = 0
+        self.anim_speed = 10
+        self.anim_time = 0
+
+        self.standing = self.frames[0]
+        self.walking = self.frames[1:4]  
+
+        self.current_direction = "standing"
+        self.moving = False
+
+    def input(self):
+        self.moving = False
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_d]:
+            self.rect.x += 5
+            self.current_direction = "walking"
+            self.moving = True
+
+        elif keys[pygame.K_a]:
+            self.rect.x -= 5
+            self.current_direction = "walking"
+            self.moving = True
+
+        # left boundary
+        if self.rect.left < 0:
+            self.rect.left = 0
+
+    def animation(self):
+        if self.moving:
+            self.anim_time += 1
+
+            if self.anim_time >= FPS // self.anim_speed:
+                self.anim_time = 0
+                self.current_frame += 1
+
+                if self.current_direction == "walking":
+                    if self.current_frame >= len(self.walking):
+                        self.current_frame = 0
+
+        else:
+            self.current_frame = 0
+            self.anim_time = 0
+
+        # choose image
+        if not self.moving:
+            self.image = self.standing
+
+        elif self.current_direction == "walking":
+            self.image = self.walking[self.current_frame]
+
+
+    def update(self):
+        self.input()
+        self.animation()
+
+class Enemy(Helper, load_spritesheet):
+    def __init__(self, path, number_of_frames):
+        load_spritesheet.__init__(self, path, number_of_frames)
+
+        Helper .__init__(
+            self,
+            self.frames[0],
+            (0, 340)
+        )                
+
+    def movement(self):
+        self.rect.x += 4
+
+# something 
+class batu():
+    def __init__(self,path):
+        self.image = self.image(path)
+        self.rect = self.image.get_rect()
+        self.rect.x = random.randint(0,500)
+        self.rect.y = 340
+
+        self.speedr = random.randint(2,6)
+
+    def update(self):
+        self.rect.x -= self.speedr
+        
+# main
+class Game:
+    def __init__(self):
+        self.player = Player(
+            "pixel/sprite/bebek.png", 4
+        )
+
+        self.enemy = Enemy(
+            "pixel/sprite/anjing.png", 3
+        )
+
+        self.objects = batu(
+            "pixel/batu1.png"
+        )
+
+    def camera(self):
+        self.camera_x = self.player.rect.centerx - WIDTH / 2
+
+        if self.camera_x < 0:
+            self.camera_x = 0
+
+    def walk(self):
+        self.enemy.movement()
+
+    def draw_background(self):
+        background_x = -(self.camera_x % land_width)
+
+        screen.blit(land, (background_x, 0))
+        screen.blit(land, (background_x + land_width, 0))
+
+    def update(self):
+        self.player.update()
+        self.camera()
+        self.walk()
+        self.batu.update()
+        
+
+    def draw(self):
+        self.draw_background()
+
+        self.player.draw(self.camera_x)
+        self.enemy.draw(self.camera_x)
+        self.objects.draw(self.camera_x)
+# gameplay
+
+game = Game()
+
+while True:
+    clock.tick(FPS)
+
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            exit()
+
+    game.update()
+    game.draw()
+
+    pygame.display.update()
