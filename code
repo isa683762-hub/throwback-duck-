@@ -1,5 +1,4 @@
 import pygame
-import random
 from sys import exit
 
 pygame.init()
@@ -11,21 +10,17 @@ FPS = 60
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 clock = pygame.time.Clock()
 
-
 # assets
-
 def load(path, size):
     image = pygame.image.load(path).convert_alpha()
     image = pygame.transform.scale(image, size)
     return image
-
 
 land = load("pixel/land.png", (WIDTH, HEIGHT))
 land_width = land.get_width()
 
 
 # spritesheet
-
 class load_spritesheet:
     def __init__(self, path, number_of_frames):
         self.sheet = pygame.image.load(path).convert_alpha()
@@ -58,12 +53,9 @@ class Helper:
 
     def draw(self, camera_x):
         screen_x = self.rect.x - camera_x
-
         screen.blit(self.image, (screen_x, self.rect.y))
 
-
 # characters
-
 class Player(Helper, load_spritesheet):
     def __init__(self, path, number_of_frames):
         load_spritesheet.__init__(self, path, number_of_frames)
@@ -80,31 +72,28 @@ class Player(Helper, load_spritesheet):
         self.anim_time = 0
 
         self.standing = self.frames[0]
-        self.walking = self.frames[1:4]  
+        self.walking = self.frames[1:4]
 
         self.current_direction = "standing"
         self.moving = False
 
     def input(self):
+        #initialize
         self.moving = False
-
+        
+        # input
         keys = pygame.key.get_pressed()
 
         if keys[pygame.K_d]:
             self.rect.x += 5
             self.current_direction = "walking"
             self.moving = True
-
-        elif keys[pygame.K_a]:
-            self.rect.x -= 5
-            self.current_direction = "walking"
-            self.moving = True
-
-        # left boundary
+    
+        
         if self.rect.left < 0:
             self.rect.left = 0
 
-    def animation(self):
+        #animation
         if self.moving:
             self.anim_time += 1
 
@@ -126,38 +115,24 @@ class Player(Helper, load_spritesheet):
 
         elif self.current_direction == "walking":
             self.image = self.walking[self.current_frame]
-
-
+        
+     
     def update(self):
         self.input()
-        self.animation()
 
 class Enemy(Helper, load_spritesheet):
     def __init__(self, path, number_of_frames):
         load_spritesheet.__init__(self, path, number_of_frames)
 
-        Helper .__init__(
+        Helper.__init__(
             self,
             self.frames[0],
             (0, 340)
-        )                
+        )
 
     def movement(self):
-        self.rect.x += 4
+        self.rect.x += 5
 
-# something 
-class batu():
-    def __init__(self,path):
-        self.image = self.image(path)
-        self.rect = self.image.get_rect()
-        self.rect.x = random.randint(0,500)
-        self.rect.y = 340
-
-        self.speedr = random.randint(2,6)
-
-    def update(self):
-        self.rect.x -= self.speedr
-        
 # main
 class Game:
     def __init__(self):
@@ -169,9 +144,18 @@ class Game:
             "pixel/sprite/anjing.png", 3
         )
 
-        self.objects = batu(
-            "pixel/batu1.png"
-        )
+        self.camera_x = 0
+
+    def reset(self):
+        self.player.rect.center = (250, 340)
+        self.enemy.rect.center = (0, 340)
+
+        self.player.current_frame = 0
+        self.player.anim_time = 0
+        self.player.moving = False
+        self.player.image = self.player.standing
+
+        self.camera_x = 0
 
     def camera(self):
         self.camera_x = self.player.rect.centerx - WIDTH / 2
@@ -188,19 +172,23 @@ class Game:
         screen.blit(land, (background_x, 0))
         screen.blit(land, (background_x + land_width, 0))
 
+    def collision(self):
+        if self.player.rect.colliderect(self.enemy.rect):
+            self.reset()
+
     def update(self):
         self.player.update()
         self.camera()
         self.walk()
-        self.batu.update()
-        
+        self.collision()
 
     def draw(self):
         self.draw_background()
 
         self.player.draw(self.camera_x)
         self.enemy.draw(self.camera_x)
-        self.objects.draw(self.camera_x)
+
+
 # gameplay
 
 game = Game()
